@@ -10,7 +10,7 @@ app = Flask(__name__)
 SHEET_URL = "https://docs.google.com/spreadsheets/d/e/1RfqS0FfOZeZnGjWcuVcFl-R8Pmt8_mxTRoqqbCNfZ6k/pub?output=csv"
 
 # URL do Google Apps Script para atualizar os sinais
-SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx6j0wyTOJEjdC6Zpn85TE_Aak3_jJml7Twk-Mxrhkuy5qJYQm6Zq43csnkOOY80hTFnw/exec"
+SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyngOe0KwoCPgwhHz0kGy9l4sff218Pco8gG8K96NEmvRpuu89RzozmWwlREDrimoCf/exec"
 
 # 📌 Verifica se o modelo XGBoost existe antes de carregar
 modelo_path = "modelo_xgb.bin"
