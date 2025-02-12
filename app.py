@@ -2,19 +2,23 @@ from flask import Flask, request, jsonify
 import xgboost as xgb
 import pandas as pd
 import requests
+import os
 
 app = Flask(__name__)
 
-# Links para a Planilha Google Sheets e Google Apps Script
+# URL do Google Sheets (substitua pelo seu link correto)
 SHEET_URL = "https://docs.google.com/spreadsheets/d/e/1RfqS0FfOZeZnGjWcuVcFl-R8Pmt8_mxTRoqqbCNfZ6k/pub?output=csv"
-SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTI92TQ2LdS68vPAbSt8YH7k3ki9bYHoxTKzpbVtqulsx31axwd7Ol5Hm9SO9haL29lw/exec"
 
-# Carregar modelo de Machine Learning
-try:
+# URL do Google Apps Script para atualizar os sinais
+SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx6j0wyTOJEjdC6Zpn85TE_Aak3_jJml7Twk-Mxrhkuy5qJYQm6Zq43csnkOOY80hTFnw/exec"
+
+# 📌 Verifica se o modelo XGBoost existe antes de carregar
+modelo_path = "modelo_xgb.bin"
+if os.path.exists(modelo_path):
     modelo = xgb.Booster()
-    modelo.load_model("modelo_xgb.bin")  # Certifique-se de que este arquivo está no GitHub!
-except Exception as e:
-    print(f"Erro ao carregar o modelo: {e}")
+    modelo.load_model(modelo_path)
+else:
+    print("❌ ERRO: Arquivo modelo_xgb.bin não encontrado!")
 
 @app.route('/atualizar', methods=['GET'])
 def atualizar():
@@ -22,32 +26,22 @@ def atualizar():
         # Baixa os dados do Google Sheets
         df = pd.read_csv(SHEET_URL)
 
-        # 📌 Filtragem de Ruído (ATR) para remover volatilidade alta
-        df["ATR"] = df["Preço"].rolling(window=14).apply(lambda x: x.max() - x.min(), raw=True)
-        df = df[df["ATR"] < df["ATR"].quantile(0.75)]  # Remove os 25% mais voláteis
-
-        # 📌 Confirmação de Tendência (SMA(50))
-        df["SMA50"] = df["Preço"].rolling(window=50).mean()
-        df["SohCompra"] = df["Preço"] > df["SMA50"]
-        df["SohVenda"] = df["Preço"] < df["SMA50"]
+        # 📌 Verifica se há pelo menos um dado válido
+        if df.empty or "Sinal IA" not in df.columns:
+            return jsonify({"status": "Nenhum dado novo"}), 200
 
         # Pega o último registro sem previsão
         ultimo = df[df["Sinal IA"] == "Pendente"].iloc[-1]
         
         if pd.isna(ultimo["Preço"]) or pd.isna(ultimo["RSI"]):
-            return jsonify({"status": "Nenhum dado novo"}), 200
+            return jsonify({"status": "Nenhum dado válido"}), 200
 
-        # 📌 Melhorar Machine Learning com otimização de hiperparâmetros
+        # Faz a previsão usando Machine Learning
         entrada = pd.DataFrame([[ultimo["Preço"], ultimo["RSI"]]], columns=["Preço", "RSI"])
         previsao = modelo.predict(xgb.DMatrix(entrada))
 
-        # Define "BUY" ou "SELL" se a tendência confirmar
-        if previsao[0] > 0.5 and ultimo["SohCompra"]:
-            resultado = "BUY"
-        elif previsao[0] <= 0.5 and ultimo["SohVenda"]:
-            resultado = "SELL"
-        else:
-            resultado = "Neutro"
+        # Define "BUY" ou "SELL"
+        resultado = "BUY" if previsao[0] > 0.5 else "SELL"
 
         # Atualiza a planilha com o resultado da IA
         requests.post(SCRIPT_URL, json={"sinal": resultado})
