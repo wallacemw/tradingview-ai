@@ -6,7 +6,7 @@ import requests
 app = Flask(__name__)
 
 # Links para a Planilha Google Sheets e Google Apps Script
-SHEET_URL = "https://docs.google.com/spreadsheets/d/e/SEU_ID_DA_PLANILHA/pub?output=csv"
+SHEET_URL = "https://docs.google.com/spreadsheets/d/e/1RfqS0FfOZeZnGjWcuVcFl-R8Pmt8_mxTRoqqbCNfZ6k/pub?output=csv"
 SCRIPT_URL = "https://script.google.com/macros/s/SEU_SCRIPT_ID/exec"
 
 # Carregar modelo de Machine Learning
