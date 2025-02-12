@@ -1,0 +1,6 @@
+flask
+xgboost
+pandas
+numpy
+requests
+gunicorn
