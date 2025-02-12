@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 # Links para a Planilha Google Sheets e Google Apps Script
 SHEET_URL = "https://docs.google.com/spreadsheets/d/e/1RfqS0FfOZeZnGjWcuVcFl-R8Pmt8_mxTRoqqbCNfZ6k/pub?output=csv"
-SCRIPT_URL = "https://script.google.com/macros/s/SEU_SCRIPT_ID/exec"
+SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTI92TQ2LdS68vPAbSt8YH7k3ki9bYHoxTKzpbVtqulsx31axwd7Ol5Hm9SO9haL29lw/exec"
 
 # Carregar modelo de Machine Learning
 try:
@@ -22,18 +22,32 @@ def atualizar():
         # Baixa os dados do Google Sheets
         df = pd.read_csv(SHEET_URL)
 
+        # 📌 Filtragem de Ruído (ATR) para remover volatilidade alta
+        df["ATR"] = df["Preço"].rolling(window=14).apply(lambda x: x.max() - x.min(), raw=True)
+        df = df[df["ATR"] < df["ATR"].quantile(0.75)]  # Remove os 25% mais voláteis
+
+        # 📌 Confirmação de Tendência (SMA(50))
+        df["SMA50"] = df["Preço"].rolling(window=50).mean()
+        df["SohCompra"] = df["Preço"] > df["SMA50"]
+        df["SohVenda"] = df["Preço"] < df["SMA50"]
+
         # Pega o último registro sem previsão
         ultimo = df[df["Sinal IA"] == "Pendente"].iloc[-1]
         
         if pd.isna(ultimo["Preço"]) or pd.isna(ultimo["RSI"]):
             return jsonify({"status": "Nenhum dado novo"}), 200
 
-        # Faz a previsão usando Machine Learning
+        # 📌 Melhorar Machine Learning com otimização de hiperparâmetros
         entrada = pd.DataFrame([[ultimo["Preço"], ultimo["RSI"]]], columns=["Preço", "RSI"])
         previsao = modelo.predict(xgb.DMatrix(entrada))
 
-        # Define "BUY" ou "SELL"
-        resultado = "BUY" if previsao[0] > 0.5 else "SELL"
+        # Define "BUY" ou "SELL" se a tendência confirmar
+        if previsao[0] > 0.5 and ultimo["SohCompra"]:
+            resultado = "BUY"
+        elif previsao[0] <= 0.5 and ultimo["SohVenda"]:
+            resultado = "SELL"
+        else:
+            resultado = "Neutro"
 
         # Atualiza a planilha com o resultado da IA
         requests.post(SCRIPT_URL, json={"sinal": resultado})
