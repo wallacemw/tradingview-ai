@@ -12,6 +12,8 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/e/1RfqS0FfOZeZnGjWcuVcFl-R8P
 # URL do Google Apps Script para atualizar os sinais
 SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyngOe0KwoCPgwhHz0kGy9l4sff218Pco8gG8K96NEmvRpuu89RzozmWwlREDrimoCf/exec"
 
+SCRIPT_URL = "https://colab.research.google.com/drive/1WS7DtBUch66qXmE8pZpesJXTvOcZlvBk?usp=sharing"
+
 # 📌 Verifica se o modelo XGBoost existe antes de carregar
 modelo_path = "modelo_xgb.bin"
 if os.path.exists(modelo_path):
